@@ -15,8 +15,8 @@ library(pander)
 library(reticulate)
 library(RColorBrewer)
 
-#use_python("python/Scripts/python.exe")
 
+#use_python("python/Scripts/python.exe")
 
 
 workspace_path <- getwd()
