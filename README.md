@@ -1,3 +1,3 @@
 # Relation virus : représentation graphique (Package igraph)
 
-# test 
+## comment utiliser le script :
