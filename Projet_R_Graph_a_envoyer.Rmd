@@ -11,7 +11,7 @@ knitr::opts_chunk$set(eval = T, echo = T, warning = F, message = F, python.retic
 library(igraph)
 library(tidyverse)
 library(gridExtra)
-library(pander)
+library(pander) 
 library(reticulate)
 library(RColorBrewer)
 
