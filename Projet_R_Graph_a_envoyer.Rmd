@@ -1,0 +1,845 @@
+---
+title: "Projet_R_Graph"
+author: "Benjamin Munoz"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval = T, echo = T, warning = F, message = F, python.reticulate = F)
+
+library(igraph)
+library(tidyverse)
+library(gridExtra)
+library(pander)
+library(reticulate)
+library(RColorBrewer)
+
+#use_python("python/Scripts/python.exe")
+
+
+
+workspace_path <- getwd()
+data_path <-  paste(workspace_path, "/", "data/", sep = "")
+output_path <-  paste(data_path, "output/", sep = "")
+```
+
+
+```{r, echo=FALSE, eval=FALSE}
+saveAsTSV <- function(data_array, file_name, output_folder) {
+  full_path <- paste(output_path, file_name, ".tsv", sep = "")
+  write_tsv(data_array, full_path)
+}
+```
+
+## Module Graphe
+
+Ce projet a pour but la description des liens évolutifs au sein de groupes de virus de procaryotes.Pour cela, les contenus en gènes (ou plus précisément en groupes d'orthologues) des virus serontcomparés et ces résultats permettront de modéliser les relations entre virus sous la forme dedifférents réseaux.
+
+
+## Partie 1
+
+
+### Réunir les segments de virus en un seul virus
+
+I.1 Il faut tout d'abord réunir les différents segments des virus segmentés en une seule ligne par virus (leur génome sont en plusieurs morceaux et chaque morceau est une ligne du fichier.tsv)
+Il n'y en a qu'une poignée, toutes les autres lignes correspondent à des virus uniques (certains virus ont le même nom mais qui représentent bien des souches ou isolats différents)
+
+```{r}
+paste(data_path, "refPhages_and_VirSorter.tsv", sep = "") -> virus_list_path
+
+
+read_tsv(virus_list_path) -> ListeVirus
+#dim(ListeVirus)
+
+SegmentVirusRegroupe <-
+  ListeVirus %>% 
+    filter(grepl("segment", Definition)) %>%
+    arrange(Name) %>%
+    group_by(Name) %>%
+    mutate(
+      gc=mean(GC), 
+      length=sum(Length), 
+      nb_Prot=sum(nb_prot), 
+      nb_phROGs=sum(nb_PhROGs), 
+      nb_sing=sum(nb_Sing), 
+      nb_paralog=sum(nb_Paralog)
+    ) %>%
+    distinct(Name, .keep_all = TRUE) %>%
+    select(
+      -GC, 
+      -Length, 
+      -nb_prot, 
+      -nb_PhROGs, 
+      -nb_Sing, 
+      -nb_Paralog
+    ) %>%
+    rename(
+      GC=gc, 
+      Length=length,
+      nb_prot=nb_Prot, 
+      nb_PhROGs=nb_phROGs, 
+      nb_Sing=nb_sing, 
+      nb_Paralog=nb_paralog
+    )
+
+ListeVirus <- ListeVirus %>%
+  filter(!grepl("segment", Definition)) %>%
+  bind_rows(SegmentVirusRegroupe)
+
+```
+
+
+### Filtrer les problèmes de prédiction
+
+I.2 Filtrer les virus pour lesquels il y a visiblement eu un problème de prédiction de protéine(normalement, il y a un peu plus de 1 gène codant une protéine pour 1000 pb, s'il y a moins de 1 gène pour 10 000 pb c'est qu'il y a un problème)
+
+
+```{r}
+
+ListeVirus <- ListeVirus %>%
+  filter(Length/nb_prot < 10000)
+
+```
+
+
+### Visualisation des génomes par genre
+
+I.3 Pour les virus infectant les genres suivants : Synechococcus, Clostridium, Streptomyces,
+Lactococcus, Neisseria, Enterococcus, :
+• déterminer le nombre de virus les infectant
+• faire des boxplot pour la taille des génomes et le GC % pour chaque groupe (un
+graphique pour les tailles de génomes, un pour le GC %, une couleur différentes par
+genre)
+
+
+#### Nombre d'infections par genre
+```{r}
+
+NbInfectionsParGenre <- 
+  ListeVirus %>% 
+    select(Name, genus) %>%
+    filter(genus %in% c(
+      "Clostridium", 
+      "Synechococcus", 
+      "Lactococcus", 
+      "Neisseria", 
+      "Enterococcus", 
+      "Streptomyces")
+    ) %>%
+    distinct(Name, .keep_all = T) %>%
+    count(genus) %>%
+    rename(nb_virus=n) 
+
+TotalVirus <- 
+  select(NbInfectionsParGenre, nb_virus) %>%
+    colSums()
+
+
+```
+
+#### Taille des génomes par genre
+```{r, echo=FALSE}
+ListeVirusFilterGenre <- ListeVirus %>% 
+  filter(genus %in% c(
+    "Clostridium", 
+    "Synechococcus", 
+    "Lactococcus", 
+    "Neisseria", 
+    "Enterococcus", 
+    "Streptomyces"
+    )
+  ) #%>% distinct(Name, .keep_all = TRUE)
+
+virusParGenre <- function(data_genre, name_genre) {
+  data_genre %>% 
+    select(Locus, Name, genus) %>%
+    filter(genus %in% c(name_genre)) %>%
+    select(Locus, Name) #%>%
+    #distinct(Name, .keep_all = T)
+}
+```
+
+
+```{r, ,eval=FALSE}
+Clostridium <- virusParGenre(ListeVirus, "Clostridium")
+Synechococcus <- virusParGenre(ListeVirus, "Synechococcus")
+Lactococcus <- virusParGenre(ListeVirus, "Lactococcus")
+Neisseria <- virusParGenre(ListeVirus, "Neisseria")
+Enterococcus <- virusParGenre(ListeVirus, "Enterococcus")
+Streptomyces <- virusParGenre(ListeVirus, "Streptomyces")
+```
+
+
+```{r, echo=FALSE, eval=FALSE}
+saveAsTSV(ListeVirusFilterGenre, "ListeVirusFilterGenre", output_path)
+
+saveAsTSV(Clostridium,   "Clostridium",  output_path)
+saveAsTSV(Synechococcus, "Synechococcus",  output_path)
+saveAsTSV(Lactococcus,   "Lactococcus",  output_path)
+saveAsTSV(Neisseria,     "Neisseria",  output_path)
+saveAsTSV(Enterococcus,  "Enterococcus",  output_path)
+saveAsTSV(Streptomyces,  "Streptomyces",  output_path)
+```
+
+
+#### Taille des génomes : boite de Tukey (boxplot)
+
+```{r}
+generateBoxPlot <- function(
+    data_array, 
+    axis_x, 
+    axis_y, 
+    legend_x, 
+    legend_y, 
+    title, 
+    caption=""
+  ) {
+  data_array %>%
+    ggplot(aes(axis_x, axis_y, color=axis_x)) + 
+    geom_boxplot() + 
+    xlab(legend_x) + 
+    ylab(legend_y) + 
+    labs(title, caption) + 
+    theme(
+        legend.position = "bottom", 
+        plot.title = element_text(hjust = 0.5)
+      )
+  #/data_array
+}
+
+
+
+generateBoxPlot(
+  ListeVirusFilterGenre, 
+  (ListeVirusFilterGenre$genus), 
+  (ListeVirusFilterGenre$Length), 
+  "Genre", 
+  "Longueur (pb)", 
+  "longueur des génomes viral en pb"
+)
+
+```
+
+La réalisation d'un boxplot sur la tailles des génomes pour chaque groupes de virus infectant les six genres de bactéries hôte, nous montre que cinq de ces groupes de virus allant de Clostridium à Streptomyces sont de taille relativement proche, autour des 50000 pb, tandis que Synechococcus sa boite à moustache se situ bien au dessus, au alentour de 180000 pb.
+
+#### Pourcentage de GC : boite de Tukey (boxplot)
+
+```{r}
+
+generateBoxPlot(
+  ListeVirusFilterGenre, 
+  (ListeVirusFilterGenre$genus), 
+  (ListeVirusFilterGenre$GC), 
+  "Genre", 
+  "GC %", 
+  "GC % pour chaque groupe"
+)
+
+```
+
+Le boxplot ici présent, nous montre le pourcentage de GC en fonction des groupes de virus infectant les six genres de bactéries où le pourcentage le plus élevé est pour Streptomyces au alentours de 65% en GC des génomes des bactériophages.
+
+
+
+
+###  Distribution de la conservation des groupes d'orthologues
+
+I.4 Pour chaque groupe de virus de la question précédente, faire une distribution de la conservation des groupes d'orthologues au sein du groupe (déterminer la liste des groupes d'orthologues du groupe puis leur conservation dans le groupe avec Python), puis faire deux graphiques avec R:
+•les 6 histogrammes (coloriés selon les mêmes couleurs que définies précédemment)sur une grille de 2 lignes et de 3 colonnes
+•les 6 distributions sous la forme de courbes (mêmes couleurs) sur un mêmegraphique
+
+#### Filtrer par groupe de genre
+
+On va dabord filtrer les éléments qui nous interesse, puis l'extraire sous forme de fichier tsv exploitable par un futur script python.
+
+```{r}
+
+ListeVirus %>%
+  filter(genus %in% c("Clostridium", "Synechococcus", "Lactococcus", "Neisseria", "Enterococcus", "Streptomyces")) %>% 
+  distinct(Locus, .keep_all = TRUE) -> Genre_Infect
+
+write_tsv(Genre_Infect, "Genre_Infect.tsv")
+```
+
+
+#### Script python générant un fichier pour la distribution de la conservation des groupes orthologues
+
+
+```{python, eval=FALSE}
+from collections import defaultdict
+from math import sqrt
+import re
+
+dictGenreNomLocus=defaultdict(list)
+i=0
+with open("Genre_Infect.tsv","r") as f3:
+	for li in f3:
+		if not li.startswith("Locus"):
+			li=li.rstrip("\n")
+			lp=li.split("\t")
+			dictGenreNomLocus[lp[-4]].append(lp[0]) #Genre avec les noms de locus
+			i+=1
+
+
+dictProteinesNomVirus=defaultdict(str)
+with open("virSorter_proteins_entete.faa", "r") as f2:
+	for li in f2:
+		li=li.rstrip("\n")
+		lp=li.split()
+		nomVirus=lp[1]
+		proteine=lp[0].lstrip(">")
+		dictProteinesNomVirus[proteine]=nomVirus #clef sont les protéines et en valeur l'id de virus associé à la protéine
+
+
+
+dictNumeroGrpOrthoNomVirus=defaultdict(set)
+i=0
+with open("phrogs_list","r") as f1:
+	for li in f1:
+		li=li.rstrip("\n")
+		i+=1
+		lp=li.split()
+		for virus in lp:
+			match=re.search("_p\d+$",virus) #recherche des protéines finissant par _pEEEE
+			if match:
+				virus=virus.rstrip(match.group()) #si c'est une protéine finissant par _pEEEE, on enleve cette partie de l'identifiant et on ajoute au dictionnaire
+				dictNumeroGrpOrthoNomVirus["phrogs_"+str(i)].add(virus)
+			else:
+				dictNumeroGrpOrthoNomVirus["phrogs_"+str(i)].add(dictProteinesNomVirus[virus]) #sinon on va chercher dans le dictionnaire créé avant le nom de virus associé à la protéine (VirSorter)
+
+
+dictGenreNumGrpOrthoApparition=defaultdict(lambda:defaultdict(int))
+for genre in dictGenreNomLocus:
+	for nomLocus in dictGenreNomLocus[genre]:
+		for numeroGrpOrtho in dictNumeroGrpOrthoNomVirus:
+			if nomLocus in dictNumeroGrpOrthoNomVirus[numeroGrpOrtho]:
+				dictGenreNumGrpOrthoApparition[genre][numeroGrpOrtho]+=1
+
+
+i=0
+for genre in dictGenreNumGrpOrthoApparition:
+	for numeroGrpOrtho in dictGenreNumGrpOrthoApparition[genre]:
+		 if i:
+		 	with open("Conservation_grp_ortho.tsv","a") as fichier:
+		 		fichier.write(genre + "\t" + numeroGrpOrtho + "\t" + str(dictGenreNumGrpOrthoApparition[genre][numeroGrpOrtho]/len(dictGenreNomLocus[genre])) + "\n")
+		 else:
+		 	i+=1
+		 	with open("Conservation_grp_ortho.tsv","w") as fichier:
+		 		fichier.write("Genre\tPhrogs\tConservation\n")
+```
+
+
+#### Représentation graphique de la conservation des groupes orthologues
+
+Lecture du fichier créer via un script python
+```{r}
+read_tsv(file = "Conservation_grp_ortho.tsv") -> ConservationOrtho
+
+#Changement des valeurs de conservation en % (pour des questions de lisibilité)
+ConservationOrtho %>%
+  mutate(conservation=Conservation*100) %>%
+  select(-Conservation) -> ConservationOrtho2
+```
+
+#### histograme de la conservation des groupes orthologues en facet_wrap
+
+```{r}
+ConservationOrtho2 %>%
+  ggplot(aes(conservation)) +
+  geom_histogram(aes(fill=Genre)) +
+  labs(caption = "refPhages_and_VirSorter.tsv", 
+       title="Distribution de la conservation des groupes orthologues au sein des groupes de virus") +
+  theme(plot.title = element_text(hjust = 0)) +
+  facet_wrap(~Genre, nrow = 2)
+```
+On observe que globalement, tous les groupes orthologue ont une faible conservation, proche de zero.
+
+
+```{r}
+ConservationOrtho2 %>% 
+  ggplot(aes(conservation, colour=Genre)) +
+  geom_freqpoly()+
+  labs(title= "Distribution de la conservation des groupes orthologues au sein des groupes de virus") +
+  theme(plot.title = element_text(hjust = 0))
+
+  
+```
+Même chose que précédement, mais ici on s'aperçoit mieux du chevauchement autour de zero de la distribution des groupes orthologue, dont Clostridium contient la plus haute valeur (sur l'axe verticale) proche de zero.
+
+Remarque : le pourcentage devrait commencer à zero, alors que dans ce graphique, tous les groupes commencent un peu avant zero, si l'on regarde bien, un ajustement est peut-être necessaire pour réctifier cette marge.
+
+## Partie 2
+
+II.1  Pour votre groupe de virus, déterminer la liste des groupes d'orthologues présents et pour
+chaque couple de virus du groupe, compter le nombre de groupes d'orthologues présents
+dans les 2 virus (peu importe le nombre de protéines de chaque virus présents dans chaque
+groupe d'orthologue, par exemple si le groupe d'orthologue 12 compte 2 protéines du virus1
+et 3 protéines du virus2 (donc des paralogues), on comptera que ces deux virus ont 1 groupe
+d'orthologue en commun).
+
+```{r}
+ListeVirus %>% 
+  filter(family %in% c("Sutterellaceae", "Oxalobacteraceae", "Comamonadaceae", "Alcaligenaceae")) -> Grp_virus
+
+write_tsv(Grp_virus, "Grp_virus.tsv")
+```
+
+
+#### Script python générant un fichier 
+```{python, eval=FALSE}
+from collections import defaultdict
+from math import sqrt
+import re
+
+
+
+list_ortho = "phrogs_list"
+prot_virus = "virSorter_proteins_entete.faa"
+Genre_Infect = "Genre_Infect.tsv"
+
+
+dict_idProt_ortho=defaultdict(str)
+dict_idVirus_setOrtho=defaultdict(set)
+dict_idProt_idVirus=defaultdict(str)
+
+
+with open(list_ortho, "r") as f1 :
+    count=0
+    for li in f1 :
+        li=li.rstrip("\n")
+        ls=li.split()
+        count+=1
+        ortho="Ortho"+str(count)
+        ortho = count   # numéro de ligne du groupe orthologue
+
+        for prot in ls :
+        	
+            if prot.startswith("p") :
+                dict_idProt_ortho[prot]=ortho
+                # print(prot)
+            else :
+                id_virus = re.sub("_p\d+","",prot)
+                #print(prot, id_virus)
+                dict_idVirus_setOrtho[id_virus].add(ortho)
+
+
+with open(prot_virus, "r") as f2 :
+    for li in f2 :
+        li = li.rstrip("\n")
+        li = li.lstrip(">")
+        ls = li.split()
+        id_prot = ls[0]
+        id_virus= ls[1]
+        dict_idProt_idVirus[id_prot] = id_virus
+
+for idProt in dict_idProt_ortho :
+    ortho = dict_idProt_ortho[idProt]
+    id_virus = dict_idProt_idVirus[idProt]
+    dict_idVirus_setOrtho[id_virus].add(ortho)
+
+
+
+dict_GroupeIdVirus_ortho = defaultdict(list)
+dict_virus1_virus2_nbOrthoCommun = defaultdict(lambda : defaultdict(int))
+
+with open("Genre_Infect", "r") as f3 :
+        for li in f3 :
+            li=li.rstrip("\n")
+            ls=li.split("\t")
+            idVirus=ls[0]
+            ortho = list(dict_idVirus_setOrtho[idVirus])
+            dict_GroupeIdVirus_ortho[idVirus]=ortho
+
+listDejaVue=[]
+
+for virus1 in dict_GroupeIdVirus_ortho :
+    listDejaVue.append(virus1)
+    for virus2 in dict_GroupeIdVirus_ortho :
+        if virus2 not in listDejaVue :
+            for ortho1 in dict_GroupeIdVirus_ortho[virus1] :
+                if ortho1 in dict_GroupeIdVirus_ortho[virus2] :
+                    dict_virus1_virus2_nbOrthoCommun[virus1][virus2]+=1
+
+
+repartition_grps_orthologues=open('repartition_grps_orthologues.tsv','w')
+repartition_grps_orthologues.write("virus1"+"\t"+"virus2"+"\t"+ "nb_commun" +"\n" )#permet d'installer un entête non pris en compte dans la partie igraph
+for virus1 in dict_virus1_virus2_nbOrthoCommun :
+        for virus2 in dict_virus1_virus2_nbOrthoCommun[virus1] :
+            nb_commun=dict_virus1_virus2_nbOrthoCommun[virus1][virus2]
+            repartition_grps_orthologues.write(virus1+"\t"+virus2+"\t"+ str(nb_commun)+"\n" )
+
+repartition_grps_orthologues.close()
+```
+
+
+### Partie Igraph
+
+#### Calcul des indices (caractéristiques du réseau)
+```{r}
+read_tsv("repartition_grps_orthologues.tsv") -> residGraph
+
+graph_from_data_frame(residGraph, directed = F) -> residGraph2
+```
+Le graph est donc non dirigé (U), nommé(N) mais pas pondéré(W)
+
+II.2.1
+```{r}
+#nombre de liens (arètes)
+E(residGraph2)
+Poids_Liens <- E(residGraph2)$nb_commun
+nbLiens = 1152
+
+#pour que mon graph soit pondéré 
+residGraph$nb_commun -> E(residGraph2)$weight
+#E(residGraph2)$weight
+residGraph2
+```
+
+
+```{r}
+#nombre de noeuds (de virus)
+V(residGraph2)
+V(residGraph2)$name
+nbSommets = 70
+```
+
+
+```{r}
+#nbre de liens possibles 
+nbLpossibles = nbSommets*(nbSommets+1)/2
+nbLpossibles
+```
+
+II.2.2
+```{r}
+##parametre gamma : nbre de liens/nbre de liens possibles
+Gamma=nbLiens/nbLpossibles
+Gamma
+#edge_density(residGraph2)
+```
+La valeur gamma retenu étant de 0.46, on a un réseau moyennement connecté
+
+
+II.2.3
+```{r}
+# le diametre = on cherche le plus court chemin pour rejoindre le voisin le plus éloigné
+diameter(residGraph2, directed = F)
+
+#print_all(residGraph2)
+```
+Le diamètre du réseau, qui correspond au plus court chemin entre deux sommets les plus éloignés est ici de 6
+
+II.2.4
+```{r}
+# le parametre Eta : Longueur moyenne des arcs
+mean_distance(residGraph2)
+```
+
+II.2.5 
+```{r}
+# Transitivité (coefficient de clustering)
+transitivity(residGraph2, type = "global")
+transitivity(residGraph2, type = "local")
+```
+Ce coeficient mesure la probabilité que des sommets soient connectés, avec ici pour un coeficient d'aglomération global qui est une moyenne de l'ensembles des valeurs local, égal à 0.73, soit proche de 1, donc une aglomération global relativement importante
+
+
+II.2.6
+```{r}
+# histogramme du degré des noeuds (le nombres d'arètes qui passent par un noeud)
+hist(degree(residGraph2), 
+     main = "Distribution du degré des noeuds")
+```
+#### Ajustement
+
+```{r}
+#Pour plus de précision
+degre <- degree(residGraph2)
+hist(degre,
+     breaks = 1:vcount(residGraph2), 
+     main= "Histogramme du degré des noeuds", 
+     xlab= "Degrés",
+     ylab = "Fréquence")
+```
+
+
+```{r}
+#le réseau 
+plot(residGraph2, directed = F)
+
+
+#même chose en considérant le poids des liens
+plot(residGraph2, edge.width= Poids_Liens, directed = F)
+
+summary(residGraph2)
+
+```
+
+
+#### Edition : Modifier le réseau
+
+
+##### centralité intermédiaire avec un layout (directed force)
+
+II.2.7 dessiner le graphe en directed force en colorant les nœuds en fonction de leur centralité
+d'intermédiarité (betweeness) 
+
+```{r}
+l <- layout_with_fr(residGraph2,
+                           dim=2,
+                           weights = E(residGraph2))
+btw <- betweenness(residGraph2, 
+                   directed = FALSE)
+fine = 500 
+pal = colorRampPalette(c('white', 'gray33', 'black'))
+graphCol = pal(fine)[as.numeric(btw,breaks = fine)]
+
+set.seed(1)
+plot(residGraph2, 
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.color=graphCol, 
+     vertex.label=NA,
+     main ="Centralité d'intermédiarité")
+
+#hist(betweenness(residGraph2))
+
+```
+Comme on peut le voir à travers ce graphique, plus la couleur tend ver le foncé (noir) plus la centralité d'intermédiare pour ce noeud aura de l'importance, on constate que le noeud dont la centralité est la plus importante est le noeud noir qui relie deux composante du graphe. Ce qui est en cohérence avec la définition de betweenness, donc le script fonctionne comme prévu.
+
+
+##### centralité intermédiaire + layout() + noeuds(prophages=carré, sinon=cercle, undef=triangle)
+
+
+II.2.8 dessiner le graphe en utilisant la même disposition des nœuds et les mêmes couleurs que
+précédemment et en dessinant les nœuds correspondant à des prophages en carré, en
+cercle sinon (et en triangle pour « undef »)
+
+
+R ne connaissant pas les triangles, une fonction qui code une forme de triangle est disponible sur internet (github) ou bien directement de l'interface help de RStudio
+
+```{r}
+mytriangle <- function(coords, v=NULL, params) {
+  vertex.color <- params("vertex", "color")
+  if (length(vertex.color) != 1 && !is.null(v)) {
+    vertex.color <- vertex.color[v]
+  }
+  vertex.size <- 1/200 * params("vertex", "size")
+  if (length(vertex.size) != 1 && !is.null(v)) {
+    vertex.size <- vertex.size[v]
+  }
+
+  symbols(x=coords[,1], y=coords[,2], bg=vertex.color,
+          stars=cbind(vertex.size, vertex.size, vertex.size),
+          add=TRUE, inches=FALSE)
+}
+add_shape("triangle", clip=shapes("circle")$clip,
+                 plot=mytriangle)
+
+```
+
+
+
+##### distinction entre les prophages, non prophage et undef
+
+```{r}
+V(residGraph2)$prophage <- as.character(Grp_virus$prophage[match(V(residGraph2)$name,Grp_virus$Locus)])
+V(residGraph2)[V(residGraph2)$prophage=="undef"]$shape <- "triangle"
+V(residGraph2)[V(residGraph2)$prophage=="yes"]$shape <- "square"
+V(residGraph2)[V(residGraph2)$prophage=="no"]$shape <- "circle"
+
+set.seed(1)
+{plot(residGraph2, 
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.color=graphCol, 
+     vertex.label="",
+     vertex.shapes=V(residGraph2)$shape,
+     main = "Centralité d'intermédiarité")
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+
+```
+
+
+##### centralisation par le degré des noeuds (degree) et de proximité (closeness)
+
+II.2.9 dessiner le graphe en utilisant la même disposition des nœuds que précédemment et les
+mêmes formes et en colorant les nœuds en fonction de la centralité de degré puis la
+centralisation de proximité (closeness)
+
+```{r}
+graphCol2 = pal(fine)[as.numeric(degree(residGraph2),breaks = fine)]
+graphCol3 = pal(fine)[as.numeric(closeness(residGraph2),breaks = fine)]
+
+set.seed(1)
+{plot(residGraph2, 
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.color=graphCol2, 
+     vertex.label="",
+     main = "centralité de degré des noeuds")
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+
+set.seed(1)
+{plot(residGraph2, 
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.color=graphCol3, 
+     vertex.label="",
+     main = "centralité de proximité") 
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+
+```
+
+
+
+II.2.10 Dessiner le même graphe en colorant les nœuds en fonction des ordres, familles ou
+genres de leurs hôtes (choisir le niveau taxonomique le plus adaptée, sachant que l'oeil
+ne peut pas discerner plus de 8-10 couleurs différentes sur un graphique) 
+
+#### Filtrer les éléments necessaires et observer
+
+```{r}
+
+#Les ordres présents dans :
+Grp_virus%>%
+  group_by(order)%>%
+  distinct(order)
+
+#Les familles (ce que l'on va choisir)
+famillePresents <- Grp_virus%>%
+  group_by(family)%>%
+  distinct(family)
+
+#Les genres
+Grp_virus%>%
+  group_by(genus)%>%
+  distinct(genus)
+```
+
+
+#### Réseau dont les noeuds sont dessiné en fonction de leur famille d'appartenance
+
+```{r}
+V(residGraph2)$famille <- as.character(Grp_virus$family[match(V(residGraph2)$name,Grp_virus$Locus)])
+
+colorsFamille <- c("blue","tomato", "gold", "dark green")
+matriceDeCouleur <- matrix(colorsFamille, nrow=1, ncol=4)
+colnames(matriceDeCouleur) <- famillePresents$family
+
+
+for (FamCourant in V(residGraph2)$famille) {
+  V(residGraph2)[V(residGraph2)$famille==FamCourant]$color <- matriceDeCouleur[,FamCourant]
+}
+
+set.seed(1)
+{plot(residGraph2, 
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.label="",
+     vertex.shapes=V(residGraph2)$shape,
+     vertex.color=V(residGraph2)$color,
+     main = "Répartition des virus selon leur appartenance aux Familles des hôtes")
+legend(x=-1.5, y=-1.1, unique(V(residGraph2)$famille), pch=21,col="#777777", pt.bg=colorsFamille, pt.cex=2, cex=0.8, bty="n", ncol=2)
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+
+```
+
+II.2.11
+```{r}
+components(residGraph2)
+```
+Il y'en à qu'une seul
+
+
+II.2.12 Déterminer les communautés du graphe de deux façons :
+• en utilisant l'optmization multi-niveau (fonction cluster_louvain())
+• en utilisant l'algorithme « edge betweenness (Newman-Girvan) »
+
+#### cluster_louvain
+
+```{r}
+CL <- cluster_louvain(residGraph2)
+
+set.seed(1)
+{plot(CL, residGraph2,
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.label="",
+     vertex.color=V(residGraph2)$color,
+     main = "Répartition des communautés de virus selon l'algorithme de Louvain")
+legend(x=-1.5, y=-1.1, unique(V(residGraph2)$famille), pch=21,col="#777777", pt.bg=colorsFamille, pt.cex=2, cex=0.8, bty="n", ncol=2)
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+```
+
+
+#### Newman-Girvan
+
+```{r}
+ceb <- cluster_edge_betweenness(residGraph2, directed = F)
+
+set.seed(1)
+{plot(ceb, residGraph2,
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.label="",
+     vertex.color=V(residGraph2)$color,
+     main = "Répartition des communautés de virus selon l'algorithme de N-G")
+legend(x=-1.5, y=-1.1, unique(V(residGraph2)$famille), pch=21,col="#777777", pt.bg=colorsFamille, pt.cex=2, cex=0.8, bty="n", ncol=2)
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+```
+#### Comparaison des deux communautés selon l'optmisation multi-niveau et l'algorithme de Newman-Girvan
+
+II.2.13 comparer les structures de ces deux communautés :
+◦ nombre de communautés détectées par les deux algorithmes
+◦ taille de ces communautés
+◦ chevauchement de ces communautés 
+
+```{r}
+#nombre de communautés détectées par les deux algorithmes
+length(CL)
+length(ceb)
+
+#taille de ces communautés
+sizes(CL)
+sizes(ceb)
+
+modularity(CL)
+modularity(ceb)
+
+
+#chevauchement de ces communautés
+compare(comm1 = CL, comm2 = ceb)
+```
+
+
+#### Dernier graphique (module colorié selon Louvain)
+
+II.2.14 dessiner le graphe en utilisant la même disposition des nœuds que précédemment et en
+coloriant les nœuds de chaque module déterminé avec la méthode Louvain avec une
+couleur différente
+
+
+```{r}
+set.seed(1)
+{plot(CL, residGraph2,
+     layout=l, 
+     edge.color="grey", 
+     #edge.width=Poids_Liens,
+     vertex.label="",
+     vertex.color=membership(CL),
+     main = "Représentaion du réseau de Famille des hôtes")
+legend(x=-1.5, y=-1.1, unique(V(residGraph2)$famille), pch=21,col="#777777", pt.bg=colorsFamille, pt.cex=2, cex=0.8, bty="n", ncol=2)
+legend("topleft", legend=c("prophage","non prophage","undef"), pch=c(1,0,2), bty="n")}
+```
+
+
+
