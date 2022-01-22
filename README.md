@@ -4,7 +4,7 @@
 
 ### Instructions : 
 
-Le script ".Rmd" qui contient le script R ainsi que les deux script python, qui seront "echo" mais pas évalué. Il faudra donc, (question de prudence, car lorsque j'ai lancer le script python sous RMarkdown, ça a fait frisé RStudio) exécuter les deux fichiers .py indépendamment du script R sous environnement Linux. Simplement en tapant la commande "python" et "le nom du fichier".
+Le script ".Rmd" qui contient le script R ainsi que les deux script python, qui seront "echo" mais pas évalué. Il faudra donc, (question de prudence, car lorsque j'ai lancer le script python sous RMarkdown, ça a fait friser RStudio) exécuter les deux fichiers .py indépendamment du script R sous environnement Linux. Simplement en tapant la commande "python" et "le nom du fichier".
 
 I)Avant d'ouvrir le fichier .rmd, pensez à créer un dossier data dans lequel seront stocké les fichiers créer par le script R.
 
