@@ -258,7 +258,7 @@ ListeVirus %>%
   filter(genus %in% c("Clostridium", "Synechococcus", "Lactococcus", "Neisseria", "Enterococcus", "Streptomyces")) %>% 
   distinct(Locus, .keep_all = TRUE) -> Genre_Infect
 
-write_tsv(Genre_Infect, "C:/Users/benja/Projet-Relation-Virus/results/Genre_Infect.tsv")
+write_tsv(Genre_Infect, "results/Genre_Infect.tsv")
 ```
 
 
@@ -271,10 +271,10 @@ from math import sqrt
 import re
 import os.path
 
-pathGenreInfect = "C:/Users/benja/Projet-Relation-Virus/results/Genre_Infect.tsv"
-pathProteins = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
-pathList = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
-dirConservation = "C:/Users/benja/Projet-Relation-Virus/results/Conservation_grp_ortho.tsv"
+pathGenreInfect = "results/Genre_Infect.tsv"
+pathProteins = "data/virSorter_proteins_entete.faa"
+pathList = "data/phrogs_list"
+dirConservation = "results/Conservation_grp_ortho.tsv"
 
 dictGenreNomLocus=defaultdict(list)
 i=0
@@ -339,7 +339,7 @@ for genre in dictGenreNumGrpOrthoApparition:
 
 Lecture du fichier créer via un script python
 ```{r}
-path_results = "C:/Users/benja/Projet-Relation-Virus/results/"
+path_results = "results/"
 
 paste(path_results, "Conservation_grp_ortho.tsv", sep = "") -> ConservationOrtho_path
 
@@ -391,7 +391,7 @@ d'orthologue en commun).
 ListeVirus %>% 
   filter(family %in% c("Sutterellaceae", "Oxalobacteraceae", "Comamonadaceae", "Alcaligenaceae")) -> Grp_virus
 
-write_tsv(Grp_virus, "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv")
+write_tsv(Grp_virus, "results/Grp_virus.tsv")
 ```
 
 
@@ -403,10 +403,10 @@ import re
 
 
 
-list_ortho = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
-prot_virus = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
-Grp_virus = "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv"
-Grp_ortho = "C:/Users/benja/Projet-Relation-Virus/results/repartition_grps_orthologues.tsv"
+list_ortho = "data/phrogs_list"
+prot_virus = "data/virSorter_proteins_entete.faa"
+Grp_virus = "results/Grp_virus.tsv"
+Grp_ortho = "results/repartition_grps_orthologues.tsv"
 
 dict_idProt_ortho=defaultdict(str)
 dict_idVirus_setOrtho=defaultdict(set)
