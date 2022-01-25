@@ -4,10 +4,10 @@ import re
 
 
 
-list_ortho = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
-prot_virus = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
-Grp_virus = "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv"
-Grp_ortho = "C:/Users/benja/Projet-Relation-Virus/results/repartition_grps_orthologues.tsv"
+list_ortho = "../data/phrogs_list"
+prot_virus = "../data/virSorter_proteins_entete.faa"
+Grp_virus = "../results/Grp_virus.tsv"
+Grp_ortho = "../results/repartition_grps_orthologues.tsv"
 
 dict_idProt_ortho=defaultdict(str)
 dict_idVirus_setOrtho=defaultdict(set)
