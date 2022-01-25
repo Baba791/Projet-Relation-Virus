@@ -258,7 +258,7 @@ ListeVirus %>%
   filter(genus %in% c("Clostridium", "Synechococcus", "Lactococcus", "Neisseria", "Enterococcus", "Streptomyces")) %>% 
   distinct(Locus, .keep_all = TRUE) -> Genre_Infect
 
-write_tsv(Genre_Infect, "Genre_Infect.tsv")
+write_tsv(Genre_Infect, "C:/Users/benja/Projet-Relation-Virus/results/Genre_Infect.tsv")
 ```
 
 
@@ -269,10 +269,16 @@ write_tsv(Genre_Infect, "Genre_Infect.tsv")
 from collections import defaultdict
 from math import sqrt
 import re
+import os.path
+
+pathGenreInfect = "C:/Users/benja/Projet-Relation-Virus/results/Genre_Infect.tsv"
+pathProteins = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
+pathList = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
+dirConservation = "C:/Users/benja/Projet-Relation-Virus/results/Conservation_grp_ortho.tsv"
 
 dictGenreNomLocus=defaultdict(list)
 i=0
-with open("Genre_Infect.tsv","r") as f3:
+with open(pathGenreInfect,"r") as f3:
 	for li in f3:
 		if not li.startswith("Locus"):
 			li=li.rstrip("\n")
@@ -282,7 +288,7 @@ with open("Genre_Infect.tsv","r") as f3:
 
 
 dictProteinesNomVirus=defaultdict(str)
-with open("virSorter_proteins_entete.faa", "r") as f2:
+with open(pathProteins, "r") as f2:
 	for li in f2:
 		li=li.rstrip("\n")
 		lp=li.split()
@@ -294,7 +300,7 @@ with open("virSorter_proteins_entete.faa", "r") as f2:
 
 dictNumeroGrpOrthoNomVirus=defaultdict(set)
 i=0
-with open("phrogs_list","r") as f1:
+with open(pathList,"r") as f1:
 	for li in f1:
 		li=li.rstrip("\n")
 		i+=1
@@ -320,11 +326,11 @@ i=0
 for genre in dictGenreNumGrpOrthoApparition:
 	for numeroGrpOrtho in dictGenreNumGrpOrthoApparition[genre]:
 		 if i:
-		 	with open("Conservation_grp_ortho.tsv","a") as fichier:
+		 	with open(dirConservation,"a") as fichier:
 		 		fichier.write(genre + "\t" + numeroGrpOrtho + "\t" + str(dictGenreNumGrpOrthoApparition[genre][numeroGrpOrtho]/len(dictGenreNomLocus[genre])) + "\n")
 		 else:
 		 	i+=1
-		 	with open("Conservation_grp_ortho.tsv","w") as fichier:
+		 	with open(dirConservation,"w") as fichier:
 		 		fichier.write("Genre\tPhrogs\tConservation\n")
 ```
 
@@ -333,7 +339,11 @@ for genre in dictGenreNumGrpOrthoApparition:
 
 Lecture du fichier créer via un script python
 ```{r}
-read_tsv(file = "Conservation_grp_ortho.tsv") -> ConservationOrtho
+path_results = "C:/Users/benja/Projet-Relation-Virus/results/"
+
+paste(path_results, "Conservation_grp_ortho.tsv", sep = "") -> ConservationOrtho_path
+
+read_tsv(file = ConservationOrtho_path) -> ConservationOrtho
 
 #Changement des valeurs de conservation en % (pour des questions de lisibilité)
 ConservationOrtho %>%
@@ -381,7 +391,7 @@ d'orthologue en commun).
 ListeVirus %>% 
   filter(family %in% c("Sutterellaceae", "Oxalobacteraceae", "Comamonadaceae", "Alcaligenaceae")) -> Grp_virus
 
-write_tsv(Grp_virus, "Grp_virus.tsv")
+write_tsv(Grp_virus, "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv")
 ```
 
 
@@ -393,10 +403,10 @@ import re
 
 
 
-list_ortho = "phrogs_list"
-prot_virus = "virSorter_proteins_entete.faa"
-Genre_Infect = "Genre_Infect.tsv"
-
+list_ortho = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
+prot_virus = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
+Grp_virus = "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv"
+Grp_ortho = "C:/Users/benja/Projet-Relation-Virus/results/repartition_grps_orthologues.tsv"
 
 dict_idProt_ortho=defaultdict(str)
 dict_idVirus_setOrtho=defaultdict(set)
@@ -404,13 +414,13 @@ dict_idProt_idVirus=defaultdict(str)
 
 
 with open(list_ortho, "r") as f1 :
-    count=0
+    compt=0
     for li in f1 :
         li=li.rstrip("\n")
         ls=li.split()
-        count+=1
-        ortho="Ortho"+str(count)
-        ortho = count   # numéro de ligne du groupe orthologue
+        compt+=1
+        ortho="Ortho"+str(compt)
+        ortho = compt   # numéro de ligne du groupe orthologue
 
         for prot in ls :
         	
@@ -442,7 +452,7 @@ for idProt in dict_idProt_ortho :
 dict_GroupeIdVirus_ortho = defaultdict(list)
 dict_virus1_virus2_nbOrthoCommun = defaultdict(lambda : defaultdict(int))
 
-with open("Genre_Infect", "r") as f3 :
+with open(Grp_virus, "r") as f3 :
         for li in f3 :
             li=li.rstrip("\n")
             ls=li.split("\t")
@@ -461,8 +471,8 @@ for virus1 in dict_GroupeIdVirus_ortho :
                     dict_virus1_virus2_nbOrthoCommun[virus1][virus2]+=1
 
 
-repartition_grps_orthologues=open('repartition_grps_orthologues.tsv','w')
-repartition_grps_orthologues.write("virus1"+"\t"+"virus2"+"\t"+ "nb_commun" +"\n" )#permet d'installer un entête non pris en compte dans la partie igraph
+repartition_grps_orthologues=open(Grp_ortho,'w')
+repartition_grps_orthologues.write("virus1"+"\t"+"virus2"+"\t"+ "nb_commun" +"\n" )
 for virus1 in dict_virus1_virus2_nbOrthoCommun :
         for virus2 in dict_virus1_virus2_nbOrthoCommun[virus1] :
             nb_commun=dict_virus1_virus2_nbOrthoCommun[virus1][virus2]
@@ -476,7 +486,9 @@ repartition_grps_orthologues.close()
 
 #### Calcul des indices (caractéristiques du réseau)
 ```{r}
-read_tsv("repartition_grps_orthologues.tsv") -> residGraph
+paste(path_results,"repartition_grps_orthologues.tsv", sep = "") -> residGraph_path
+
+read_tsv(file = residGraph_path) -> residGraph
 
 graph_from_data_frame(residGraph, directed = F) -> residGraph2
 ```
@@ -606,7 +618,7 @@ plot(residGraph2,
 #hist(betweenness(residGraph2))
 
 ```
-Comme on peut le voir à travers ce graphique, plus la couleur tend ver le foncé (noir) plus la centralité d'intermédiare pour ce noeud aura de l'importance, on constate que le noeud dont la centralité est la plus importante est le noeud noir qui relie deux composante du graphe. Ce qui est en cohérence avec la définition de betweenness, donc le script fonctionne comme prévu.
+Comme on peut le voir à travers ce graphique, plus la couleur tend vers le foncé (noir) plus la centralité d'intermédiare pour ce noeud aura de l'importance, on constate que le noeud dont la centralité est la plus importante est le noeud noir qui relie deux composante du graphe. Ce qui est en cohérence avec la définition de betweenness, donc le script fonctionne comme prévu.
 
 
 ##### centralité intermédiaire + layout() + noeuds(prophages=carré, sinon=cercle, undef=triangle)

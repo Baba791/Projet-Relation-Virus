@@ -4,9 +4,10 @@ import re
 
 
 
-list_ortho = "phrogs_list"
-prot_virus = "virSorter_proteins_entete.faa"
-Grp_virus = "Grp_virus.tsv"
+list_ortho = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
+prot_virus = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
+Grp_virus = "C:/Users/benja/Projet-Relation-Virus/results/Grp_virus.tsv"
+Grp_ortho = "C:/Users/benja/Projet-Relation-Virus/results/repartition_grps_orthologues.tsv"
 
 dict_idProt_ortho=defaultdict(str)
 dict_idVirus_setOrtho=defaultdict(set)
@@ -52,7 +53,7 @@ for idProt in dict_idProt_ortho :
 dict_GroupeIdVirus_ortho = defaultdict(list)
 dict_virus1_virus2_nbOrthoCommun = defaultdict(lambda : defaultdict(int))
 
-with open("Grp_virus.tsv", "r") as f3 :
+with open(Grp_virus, "r") as f3 :
         for li in f3 :
             li=li.rstrip("\n")
             ls=li.split("\t")
@@ -71,7 +72,7 @@ for virus1 in dict_GroupeIdVirus_ortho :
                     dict_virus1_virus2_nbOrthoCommun[virus1][virus2]+=1
 
 
-repartition_grps_orthologues=open('repartition_grps_orthologues.tsv','w')
+repartition_grps_orthologues=open(Grp_ortho,'w')
 repartition_grps_orthologues.write("virus1"+"\t"+"virus2"+"\t"+ "nb_commun" +"\n" )
 for virus1 in dict_virus1_virus2_nbOrthoCommun :
         for virus2 in dict_virus1_virus2_nbOrthoCommun[virus1] :

@@ -1,10 +1,16 @@
 from collections import defaultdict
 from math import sqrt
 import re
+import os.path
+
+pathGenreInfect = "C:/Users/benja/Projet-Relation-Virus/results/Genre_Infect.tsv"
+pathProteins = "C:/Users/benja/Projet-Relation-Virus/data/virSorter_proteins_entete.faa"
+pathList = "C:/Users/benja/Projet-Relation-Virus/data/phrogs_list"
+dirConservation = "C:/Users/benja/Projet-Relation-Virus/results/Conservation_grp_ortho.tsv"
 
 dictGenreNomLocus=defaultdict(list)
 i=0
-with open("Genre_Infect.tsv","r") as f3:
+with open(pathGenreInfect,"r") as f3:
 	for li in f3:
 		if not li.startswith("Locus"):
 			li=li.rstrip("\n")
@@ -14,7 +20,7 @@ with open("Genre_Infect.tsv","r") as f3:
 
 
 dictProteinesNomVirus=defaultdict(str)
-with open("virSorter_proteins_entete.faa", "r") as f2:
+with open(pathProteins, "r") as f2:
 	for li in f2:
 		li=li.rstrip("\n")
 		lp=li.split()
@@ -26,7 +32,7 @@ with open("virSorter_proteins_entete.faa", "r") as f2:
 
 dictNumeroGrpOrthoNomVirus=defaultdict(set)
 i=0
-with open("phrogs_list","r") as f1:
+with open(pathList,"r") as f1:
 	for li in f1:
 		li=li.rstrip("\n")
 		i+=1
@@ -52,10 +58,10 @@ i=0
 for genre in dictGenreNumGrpOrthoApparition:
 	for numeroGrpOrtho in dictGenreNumGrpOrthoApparition[genre]:
 		 if i:
-		 	with open("Conservation_grp_ortho.tsv","a") as fichier:
+		 	with open(dirConservation,"a") as fichier:
 		 		fichier.write(genre + "\t" + numeroGrpOrtho + "\t" + str(dictGenreNumGrpOrthoApparition[genre][numeroGrpOrtho]/len(dictGenreNomLocus[genre])) + "\n")
 		 else:
 		 	i+=1
-		 	with open("Conservation_grp_ortho.tsv","w") as fichier:
+		 	with open(dirConservation,"w") as fichier:
 		 		fichier.write("Genre\tPhrogs\tConservation\n")
 
