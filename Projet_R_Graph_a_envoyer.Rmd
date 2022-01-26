@@ -16,7 +16,7 @@ library(reticulate)
 library(RColorBrewer)
 
 
-#use_python("python/Scripts/python.exe")
+use_python("python/Scripts/python.exe")
 
 workspace_path <- getwd()
 data_path <-  paste(workspace_path, "/", "data/", sep = "")
