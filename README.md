@@ -4,7 +4,7 @@
 
 ### Instructions : 
 
-Au plus simple, ouvrir le fichier "Projet_R_Graph_a_envoer.Rmd" dans RStudios et cliqué sur l'onglet "knit" 
+Au plus simple, ouvrir le fichier "Projet_R_Graph_a_envoyer.Rmd" dans RStudios et cliquer sur l'onglet "knit" 
 
 
 ### package nécessaires 
