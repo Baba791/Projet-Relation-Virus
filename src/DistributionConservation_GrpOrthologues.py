@@ -4,11 +4,6 @@ import re
 import os.path
 
 
-# PROJET R GRAPH /
-# 					data/phrogs_list
-#					src/QI4.py
-#					results/Genre_Infect
-#
 pathGenreInfect = "../results/Genre_Infect.tsv"
 pathProteins = "../data/virSorter_proteins_entete.faa"
 pathList = "../data/phrogs_list"
